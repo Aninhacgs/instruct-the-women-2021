@@ -16,6 +16,22 @@ class PackageSerializer(serializers.ModelSerializer):
         # Buscar a última versão caso ela não seja especificada pelo usuário.
         # Subir a exceção `serializers.ValidationError()` se o pacote não
         # for válido.
+        name = data.get('name','')
+        version = data.get('version','')
+        if version:
+            exist = version_exists(name,version)
+            if exist:
+                return data
+            else:
+                raise serializers.ValidationError({"erro":"one or more packages doesn't exist"})
+        else:
+            latest = latest_version(name)
+
+            if latest:
+                data['version'] = latest
+                return data
+            else:
+                raise serializers.ValidationError({"erro":"one or more packages doesn't exist"})
         return data
 
 
@@ -34,4 +50,10 @@ class ProjectSerializer(serializers.ModelSerializer):
         # - https://docs.djangoproject.com/en/3.2/topics/db/models/
         # - https://www.django-rest-framework.org/api-guide/serializers/#saving-instances
         packages = validated_data["packages"]
-        return Project(name=validated_data["name"])
+        projeto = Project.objects.create(name=validated_data['name'])
+        leng_pack=len(packages)
+        i = 0
+        while i < leng_pack:
+            package = packageRelease.objects.create(name=packages[i]['name'],version=packages[i]['version'],project=projeto)
+            i += 1
+        projeto.save()
